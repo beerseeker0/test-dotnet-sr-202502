@@ -1,0 +1,32 @@
+services:
+  applicanttracking.api:
+    build:
+      context: .
+      dockerfile: src/ApplicantTracking.Api/Dockerfile
+    container_name: applicanttracking.api
+    ports:
+      - "8080:80"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: >
+        Server=sqlserver,1433;
+        Database=RedArborTest;
+        User Id=sa;
+        Password=@teste123;
+        TrustServerCertificate=True;
+    depends_on:
+      - sqlserver
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "@teste123"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+
+volumes:
+  sqlserver_data:

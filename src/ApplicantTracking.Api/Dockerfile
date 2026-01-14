@@ -1,24 +1,25 @@
-#See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+WORKDIR /src
 
-FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
+# Copiar SOMENTE os csproj necessários
+COPY src/ApplicantTracking.Api/ApplicantTracking.Api.csproj src/ApplicantTracking.Api/
+COPY src/ApplicantTracking.Application/ApplicantTracking.Application.csproj src/ApplicantTracking.Application/
+COPY src/ApplicantTracking.Domain/ApplicantTracking.Domain.csproj src/ApplicantTracking.Domain/
+COPY src/ApplicantTracking.Infrastructure/ApplicantTracking.Infrastructure.csproj src/ApplicantTracking.Infrastructure/
+
+# Restore 
+RUN dotnet restore src/ApplicantTracking.Api/ApplicantTracking.Api.csproj
+
+# Copiar o restante do código
+COPY . .
+
+# Build / Publish
+WORKDIR /src/src/ApplicantTracking.Api
+RUN dotnet publish -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:7.0
 WORKDIR /app
 EXPOSE 80
-EXPOSE 443
 
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
-ARG BUILD_CONFIGURATION=Release
-WORKDIR /src
-COPY ["ApplicantTracking.Api/ApplicantTracking.Api.csproj", "ApplicantTracking.Api/"]
-RUN dotnet restore "./ApplicantTracking.Api/ApplicantTracking.Api.csproj"
-COPY . .
-WORKDIR "/src/ApplicantTracking.Api"
-RUN dotnet build "./ApplicantTracking.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
-
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./ApplicantTracking.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-
-FROM base AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "ApplicantTracking.Api.dll"]

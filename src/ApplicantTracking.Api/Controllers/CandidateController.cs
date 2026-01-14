@@ -1,5 +1,13 @@
-using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using ApplicantTracking.Application.Commands.Candidate.CreateCandidate;
+using ApplicantTracking.Application.Commands.Candidate.DeleteCandidate;
+using ApplicantTracking.Application.Commands.Candidate.QueryCandidate;
+using ApplicantTracking.Application.Commands.Candidate.UpdateCandidate;
+using MediatR;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 
 namespace ApplicantTracking.Api.Controllers
 {
@@ -7,41 +15,55 @@ namespace ApplicantTracking.Api.Controllers
     [Route("candidates")]
     public sealed class CandidateController : ControllerBase
     {
+        private readonly IMediator _mediator;
+
+        public CandidateController(IMediator mediator)
+        {
+            _mediator = mediator;
+        }
+
         [HttpGet()]
+        [ProducesResponseType(typeof(List<Domain.DTO.Candidate>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> List()
         {
-            // TODO: Implement this method
-            return Ok();
+            var result = await _mediator.Send(new ListCandidateQuery());
+            return Ok(result);
         }
 
-        [HttpGet("{idCandidate:int}")]
-        public async Task<IActionResult> Get([FromRoute] int idCandidate)
+        [HttpGet("{id:int}")]
+        [ProducesResponseType(typeof(Domain.DTO.Candidate), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Get([FromRoute] int id)
         {
-            // TODO: Implement this method
-            return Ok();
+            var result = await _mediator.Send(new GetCandidateByIdQuery(id));
+            return result is null ? NotFound() : Ok(result);
         }
 
-        // TODO: Change 'object candidate' to your viewmodel
         [HttpPost()]
-        public async Task<IActionResult> Create([FromBody] object candidate)
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Create([FromBody] CreateCandidateCommand command)
         {
-            // TODO: Implement this method
+            var id = await _mediator.Send(command);
+            return CreatedAtAction(nameof(Get), new { id }, null);
+        }
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Edit([FromRoute] int id, [FromBody] UpdateCandidateCommand command)
+        {
+            if (id != command.IdCandidate)
+                return BadRequest();
+
+            await _mediator.Send(command);
             return Ok();
         }
 
-        // TODO: Change 'object candidate' to your viewmodel
-        [HttpPut("{idCandidate:int}")]
-        public async Task<IActionResult> Edit([FromRoute] int idCandidate, [FromBody] object candidate)
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete([FromRoute] int id)
         {
-            // TODO: Implement this method
-            return NoContent();
-        }
-
-        [HttpDelete("{idCandidate:int}")]
-        public async Task<IActionResult> Delete([FromRoute] int idCandidate)
-        {
-            // TODO: Implement this method
-            return NoContent();
+            await _mediator.Send(new DeleteCandidateCommand(id));
+            return Ok();
         }
     }
 }
